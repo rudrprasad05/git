@@ -1,11 +1,10 @@
 package main
 
 import (
-	"bufio"
+	"crypto/sha1"
 	"fmt"
+	"log"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -16,13 +15,31 @@ type Commit struct {
 	Message   string
 }
 
-// ReadFile reads the content of a file and returns it as a string.
-func ReadFile(filePath string) (string, error) {
+func CreateBlob(filePath string) ([]byte, string, error) {
+	// Read the content of the file
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", err
+		return nil, "", fmt.Errorf("failed to read file: %v", err)
 	}
-	return string(content), nil
+
+	// Create the "blob" object by prepending the size of the content
+	size := len(content)
+	header := fmt.Sprintf("blob %d\000", size) // Git's header for blob (size + content)
+	blobContent := append([]byte(header), content...)
+
+	// Calculate the SHA-1 hash of the "blob" object
+	hash := sha1.New()
+	hash.Write(blobContent)
+	hashSum := hash.Sum(nil)
+
+	err = os.WriteFile(fmt.Sprintf("%x", hashSum), blobContent, 0644)
+	if err != nil {
+		fmt.Println("err1")
+		log.Fatal(err)
+	}
+
+	// Return the SHA-1 hash and the string representation
+	return hashSum, fmt.Sprintf("%x", hashSum), nil
 }
 
 // WatchFile polls the file for changes and creates commits for each change.
@@ -73,122 +90,34 @@ func WatchFile(filePath string, interval time.Duration) {
 	}
 }
 
-// ViewCommitHistory displays the commit history.
-func ViewCommitHistory(history []Commit) {
-	fmt.Println("Commit History:")
-	for i, commit := range history {
-		fmt.Printf("Commit %d:\n", i+1)
-		fmt.Printf("Timestamp: %v\n", commit.Timestamp)
-		fmt.Printf("Message: %s\n", commit.Message)
-		fmt.Println("Content:")
-		fmt.Println(commit.Content)
-		fmt.Println("--------------------")
-	}
-}
-
-func GetIgnoreFile(filePath string) (map[string]bool, error) {
-	ignoreMap := make(map[string]bool)
-
-	// Open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	// Create a new scanner to read the file line by line
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		newLine := strings.Replace(scanner.Text(), "/", "", 1)
-		ignoreMap[newLine] = true
-	}
-
-	// Check for errors that may have occurred during scanning
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return ignoreMap, nil
-}
-func GetAllFiles(ignoredFiles map[string]bool) ([]string, error) {
-	var files []string
-
-	// Get the current directory
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	// Walk through the directory structure
-	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		// check if its in ignore file
-		dirName := strings.Replace(d.Name(), "/", "", 1)
-
-		if ignoredFiles[dirName] {
-			if d.IsDir() {
-				// Skip the entire directory
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		// If it's a file, add it to the list
-		if !d.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return files, nil
-}
-
-func FindDifference(a, b []string) []string {
-	// Create a map to store elements of B for quick lookup
-	bMap := make(map[string]bool)
-	for _, val := range b {
-		bMap[val] = true
-	}
-
-	// Find elements in A that are not in B
-	var difference []string
-	for _, val := range a {
-		if !bMap[val] {
-			difference = append(difference, val)
-		}
-	}
-
-	return difference
-}
-
 func main() {
 	ignoredFiles, err := GetIgnoreFile(".getignore")
 	if err != nil {
 		fmt.Println("File doesnt exist, skipping", err)
 		return
 	}
-
-	allFiles, allFileErr := GetAllFiles(ignoredFiles)
+	_, allFileErr := GetAllFilesAfterIgnoring(ignoredFiles)
 	if allFileErr != nil {
 		fmt.Println("Error:", allFileErr)
 		return
 	}
 
-	fmt.Println(allFiles)
-
-	// watchFiles := FindDifference(allFiles, ignoredFiles)
-
-	// for _, s := range watchFiles {
+	// for _, s := range allFiles {
 	// 	go WatchFile(s, 1*time.Second)
 
 	// }
 
-	// Start watching the file with an interval of 1 second
+	// txt := "example.txt"
 
-	// Keep the main program running
+	// hashBytes, hashStr, err := CreateBlob(txt)
+	// if err != nil {
+	// 	fmt.Println("Error:", err)
+	// 	return
+	// }
+	// fmt.Printf("SHA-1 Hash (hex): %s\n", hashStr)
+	// fmt.Printf("SHA-1 Hash (bytes): %x\n", hashBytes)
+
+	// Decode the index file
+
 	select {}
 }

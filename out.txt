@@ -1,0 +1,6 @@
+.getignore
+.gitignore
+example.txt
+go.mod
+main.go
+package/get.go
