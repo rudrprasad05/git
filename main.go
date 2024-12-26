@@ -126,8 +126,12 @@ func GetAllFiles(ignoredFiles map[string]bool) ([]string, error) {
 		}
 		// check if its in ignore file
 		dirName := strings.Replace(d.Name(), "/", "", 1)
-		_, ok := ignoredFiles[dirName]
-		if ok {
+
+		if ignoredFiles[dirName] {
+			if d.IsDir() {
+				// Skip the entire directory
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		// If it's a file, add it to the list
