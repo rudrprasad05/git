@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha1"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -89,35 +91,35 @@ func WatchFile(filePath string, interval time.Duration) {
 		time.Sleep(interval)
 	}
 }
-
 func main() {
-	ignoredFiles, err := GetIgnoreFile(".getignore")
-	if err != nil {
-		fmt.Println("File doesnt exist, skipping", err)
-		return
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
+		fmt.Print("get> ")
+		if !scanner.Scan() {
+			// Handle EOF (Ctrl+D / Ctrl+Z)
+			fmt.Println("\nEOF detected. Use the 'exit' command to quit.")
+			continue
+		}
+
+		command := strings.ToLower(strings.TrimSpace(scanner.Text()))
+		if command == "" {
+			// Skip empty commands
+			continue
+		}
+
+		switch command {
+		case "get init":
+			if err := initializeGet(); err != nil {
+				fmt.Println("Error:", err)
+			} else {
+				fmt.Println("Repository initialized.")
+			}
+		case "exit":
+			fmt.Println("Exiting Get...")
+			return
+		default:
+			fmt.Println("Unknown command. Supported commands: get init, exit")
+		}
 	}
-	_, allFileErr := GetAllFilesAfterIgnoring(ignoredFiles)
-	if allFileErr != nil {
-		fmt.Println("Error:", allFileErr)
-		return
-	}
-
-	// for _, s := range allFiles {
-	// 	go WatchFile(s, 1*time.Second)
-
-	// }
-
-	// txt := "example.txt"
-
-	// hashBytes, hashStr, err := CreateBlob(txt)
-	// if err != nil {
-	// 	fmt.Println("Error:", err)
-	// 	return
-	// }
-	// fmt.Printf("SHA-1 Hash (hex): %s\n", hashStr)
-	// fmt.Printf("SHA-1 Hash (bytes): %x\n", hashBytes)
-
-	// Decode the index file
-
-	select {}
 }
