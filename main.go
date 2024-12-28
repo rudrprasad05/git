@@ -91,6 +91,7 @@ func WatchFile(filePath string, interval time.Duration) {
 		time.Sleep(interval)
 	}
 }
+
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -110,11 +111,12 @@ func main() {
 
 		switch command {
 		case "get init":
-			if err := initializeGet(); err != nil {
+			if err := GetInit(); err != nil {
 				fmt.Println("Error:", err)
 			} else {
 				fmt.Println("Repository initialized.")
 			}
+		case "get add":
 		case "exit":
 			fmt.Println("Exiting Get...")
 			return
